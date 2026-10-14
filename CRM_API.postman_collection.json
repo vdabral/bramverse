@@ -1,0 +1,294 @@
+{
+	"info": {
+		"_postman_id": "c86a323a-f10d-4001-9876-crmapi000001",
+		"name": "CRM Lead Management API",
+		"description": "Postman collection for testing all 6 REST endpoints of the CRM Backend API, including authentication, public lead submission, and concurrency-protected lead claiming.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "lead_id",
+			"value": "1",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Auth - Register Employee",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 201) {",
+							"    pm.test(\"Status code is 201 Created\", function () {",
+							"        pm.expect(pm.response.code).to.eql(201);",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Rahul Sharma\",\n  \"email\": \"rahul@example.com\",\n  \"password\": \"Password@123\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"register"
+					]
+				},
+				"description": "Registers a new counselor/employee account. Passwords are automatically hashed with bcrypt."
+			},
+			"response": []
+		},
+		{
+			"name": "2. Auth - Login Employee",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200 OK\", function () {",
+							"    pm.expect(pm.response.code).to.eql(200);",
+							"});",
+							"const jsonData = pm.response.json();",
+							"if (jsonData.token) {",
+							"    pm.collectionVariables.set(\"jwt_token\", jsonData.token);",
+							"    console.log(\"Saved jwt_token to collection variables\");",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"rahul@example.com\",\n  \"password\": \"Password@123\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/login",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login"
+					]
+				},
+				"description": "Authenticates the employee and returns a signed JWT token. The test script automatically captures and saves the token to {{jwt_token}}."
+			},
+			"response": []
+		},
+		{
+			"name": "3. Enquiries - Submit Public Lead",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201 Created\", function () {",
+							"    pm.expect(pm.response.code).to.eql(201);",
+							"});",
+							"const jsonData = pm.response.json();",
+							"if (jsonData.enquiry && jsonData.enquiry.id) {",
+							"    pm.collectionVariables.set(\"lead_id\", jsonData.enquiry.id.toString());",
+							"    console.log(\"Saved lead_id:\", jsonData.enquiry.id);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Amit Kumar\",\n  \"email\": \"amit@example.com\",\n  \"courseInterest\": \"Full Stack Development\",\n  \"phone\": \"9876543210\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/enquiries",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"enquiries"
+					]
+				},
+				"description": "Public endpoint for prospective student course enquiries. Does not require authentication. Automatically captures lead_id for subsequent tests."
+			},
+			"response": []
+		},
+		{
+			"name": "4. Enquiries - Get Unclaimed Leads (Protected)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200 OK\", function () {",
+							"    pm.expect(pm.response.code).to.eql(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{jwt_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/enquiries/unclaimed",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"enquiries",
+						"unclaimed"
+					]
+				},
+				"description": "Fetches all unclaimed public enquiries. Requires a valid JWT token in Authorization header."
+			},
+			"response": []
+		},
+		{
+			"name": "5. Enquiries - Claim Lead (Protected)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Claim response status\", function () {",
+							"    pm.expect([200, 409]).to.include(pm.response.code);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{jwt_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PATCH",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/enquiries/{{lead_id}}/claim",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"enquiries",
+						"{{lead_id}}",
+						"claim"
+					]
+				},
+				"description": "Claims an unclaimed lead atomically for the logged-in employee. If already claimed by someone else, returns 409 Conflict."
+			},
+			"response": []
+		},
+		{
+			"name": "6. Enquiries - Get My Claimed Leads (Protected)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200 OK\", function () {",
+							"    pm.expect(pm.response.code).to.eql(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{jwt_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/enquiries/my-leads",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"enquiries",
+						"my-leads"
+					]
+				},
+				"description": "Returns all leads claimed exclusively by the currently authenticated employee."
+			},
+			"response": []
+		}
+	]
+}
